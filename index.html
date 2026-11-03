@@ -7,7 +7,9 @@
 <label><input type="radio" name="b" value="o" checked> Photo aérienne</label>
 <label><input type="radio" name="b" value="l"> Relief LiDAR HD</label>
 <label><input type="radio" name="b" value="p"> Plan</label>
-<label>Planches <input id="a" type="range" min="0" max="1" step=".05" value="1"></label></div>
+<label>Planches <input id="a" type="range" min="0" max="1" step=".05" value="1"></label>
+<label><input id="co" type="checkbox" checked> OTAN (Mesnil-le-Roi)</label>
+<div><button data-g="48.9955,2.0075,16">Triel</button> <button data-g="48.9262,2.1135,17">OTAN</button></div></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const g=(l,s,f)=>`https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${l}&STYLE=${s}&FORMAT=${f}&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`;
@@ -16,6 +18,9 @@ l:L.tileLayer(g('IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.SHADOW','norm
 p:L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,maxNativeZoom:19})};
 const map=L.map('m',{layers:[B.o]}).setView([48.9955,2.0075],16);
 const at=L.tileLayer('tiles/{z}/{x}/{y}.png',{minZoom:14,maxZoom:20,maxNativeZoom:18,zIndex:10}).addTo(map);
-document.querySelectorAll('[name=b]').forEach(r=>r.onchange=()=>{Object.values(B).forEach(x=>map.removeLayer(x));B[r.value].addTo(map);at.bringToFront()});
-document.getElementById('a').oninput=e=>at.setOpacity(+e.target.value);
+document.querySelectorAll('[name=b]').forEach(r=>r.onchange=()=>{Object.values(B).forEach(x=>map.removeLayer(x));B[r.value].addTo(map);at.bringToFront();ot.bringToFront()});
+const ot=L.tileLayer('otan/{z}/{x}/{y}.png',{minZoom:15,maxZoom:21,maxNativeZoom:19,zIndex:11}).addTo(map);
+document.getElementById('a').oninput=e=>{at.setOpacity(+e.target.value);ot.setOpacity(+e.target.value)};
+document.getElementById('co').onchange=e=>e.target.checked?ot.addTo(map):map.removeLayer(ot);
+document.querySelectorAll('button[data-g]').forEach(b=>b.onclick=()=>{const [a,c,z]=b.dataset.g.split(',');map.setView([+a,+c],+z)});
 </script></body></html>
