@@ -14,6 +14,7 @@
 <label><input id="ce" type="checkbox" checked> Évecquemont C</label>
 <label><input id="cc" type="checkbox" checked> Conflans AT</label>
 <label><input id="cp" type="checkbox" checked> Pontoise</label>
+<label><input id="cad" type="checkbox"> Cadastre (parcelles IGN)</label>
 <div><button data-g="48.9955,2.0075,16">Triel</button> <button data-g="48.9262,2.1135,17">OTAN</button> <button data-g="48.8665,2.1225,17">Louveciennes</button> <button data-g="49.0138,1.9369,17">Évecquemont</button> <button data-g="48.9938,2.1174,17">Conflans</button> <button data-g="49.0543,2.1105,16">Pontoise</button></div></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -34,6 +35,8 @@ document.getElementById('cl').onchange=e=>e.target.checked?lv.addTo(map):map.rem
 document.getElementById('ce').onchange=e=>e.target.checked?ev.addTo(map):map.removeLayer(ev);
 document.getElementById('cc').onchange=e=>e.target.checked?cf.addTo(map):map.removeLayer(cf);
 document.getElementById('cp').onchange=e=>e.target.checked?pt.addTo(map):map.removeLayer(pt);
+const cd=L.tileLayer(g('CADASTRALPARCELS.PARCELLAIRE_EXPRESS','PCI%20vecteur','image/png'),{maxZoom:21,maxNativeZoom:19,zIndex:50});
+document.getElementById('cad').onchange=e=>e.target.checked?cd.addTo(map):map.removeLayer(cd);
 document.getElementById('co').onchange=e=>e.target.checked?ot.addTo(map):map.removeLayer(ot);
 document.querySelectorAll('button[data-g]').forEach(b=>b.onclick=()=>{const [a,c,z]=b.dataset.g.split(',');map.setView([+a,+c],+z)});
 </script></body></html>
