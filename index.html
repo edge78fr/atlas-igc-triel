@@ -37,7 +37,8 @@ html,body,#m{height:100%;margin:0}
    <label><input type="radio" name="b" value="p"> Plan</label>
    <label><input type="radio" name="b" value="w"> Fond blanc</label></div>
    <label><input id="cad" type="checkbox"> Cadastre (parcelles IGN)</label></div>
-  <div class="sec"><h4>Plans</h4><div id="plans"></div></div>
+  <div class="sec"><h4>Plans</h4><div id="plans"></div>
+   <label><input id="mpts" type="checkbox"> Méry : salles et cheminements</label></div>
   <div class="sec"><h4>Outils</h4><div class="outils">
    <button id="bPos" title="Centrer la carte sur ma position">📍 Ma position</button>
    <button id="bMes" title="Clique pour poser des points, double-clic ou Échap pour finir">📏 Mesurer</button>
@@ -136,6 +137,17 @@ let drag=false;const dep=e=>{if(!drag)return;const x=(e.touches?e.touches[0].cli
 rid.addEventListener('mousedown',e=>{drag=true;e.preventDefault()});rid.addEventListener('touchstart',e=>{drag=true;e.preventDefault()},{passive:false});
 document.addEventListener('mousemove',dep);document.addEventListener('touchmove',dep,{passive:false});
 document.addEventListener('mouseup',()=>drag=false);document.addEventListener('touchend',()=>drag=false);
+
+// Méry : salles et cheminements (relevé MyKTAMap, recalé sur notre calage)
+const colT={salle:'#c0f',info:'#08f',pa:'#f00',pb:'#f60',vehicule:'#555',cao:'#0a0',caf:'#060',passage:'#fa0',elec:'#ff0',danger:'#f00'};
+const colR={principal:'#e00',secondaire:'#f80',chemin:'#fc0'};
+let mpts=null;const mcb=document.getElementById('mpts');
+async function chargeMpts(){if(mpts)return mpts;const j=await (await fetch('mery_pts.geojson')).json();
+ mpts=L.geoJSON(j,{pane:'cadp',style:f=>({color:colR[f.properties.type]||'#f80',weight:f.properties.type==='principal'?3:2,dashArray:f.properties.type==='chemin'?'4 4':null,opacity:.9}),
+  pointToLayer:(f,ll)=>L.circleMarker(ll,{pane:'cadp',radius:5,color:'#fff',weight:1.5,fillColor:colT[f.properties.type]||'#08f',fillOpacity:1}),
+  onEachFeature:(f,l)=>{if(f.properties.nom)l.bindTooltip(f.properties.nom+(f.properties.desc?'<br>'+f.properties.desc:''))}});return mpts}
+mcb.checked=store.get('mpts',false);if(mcb.checked)chargeMpts().then(l=>l.addTo(map));
+mcb.onchange=async()=>{store.set('mpts',mcb.checked);const l=await chargeMpts();mcb.checked?l.addTo(map):map.removeLayer(l)};
 // lien
 document.getElementById('bLien').onclick=()=>{info.textContent=copier(location.href)?'Lien copié ✔':location.href};
 </script></body></html>
