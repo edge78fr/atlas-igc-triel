@@ -1,45 +1,141 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Atlas IGC Triel</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<style>html,body,#m{height:100%;margin:0}#p{position:absolute;z-index:1000;top:10px;right:10px;background:#fff;padding:10px 12px;border-radius:6px;font:13px system-ui;box-shadow:0 1px 6px #0006;max-width:230px}#p label{display:block;margin:4px 0}#p input[type=range]{width:100%}</style></head><body>
-<div id="m"></div>
-<div id="p"><b>Atlas IGC Triel</b>
-<label><input type="radio" name="b" value="o" checked> Photo aérienne</label>
-<label><input type="radio" name="b" value="l"> Relief LiDAR HD</label>
-<label><input type="radio" name="b" value="p"> Plan</label>
-<label><input type="radio" name="b" value="w"> Fond blanc</label>
-<label>Planches <input id="a" type="range" min="0" max="1" step=".05" value="1"></label>
-<label><input id="co" type="checkbox" checked> OTAN (Mesnil-le-Roi)</label>
-<label><input id="cl" type="checkbox" checked> Louveciennes</label>
-<label><input id="ce" type="checkbox" checked> Évecquemont C</label>
-<label><input id="cc" type="checkbox" checked> Conflans AT</label>
-<label><input id="cp" type="checkbox" checked> Pontoise</label>
-<label><input id="cm" type="checkbox" checked> Méry-sur-Oise (Hennocques)</label>
-<label><input id="cad" type="checkbox"> Cadastre (parcelles IGN)</label>
-<div><button data-g="48.9955,2.0075,16">Triel</button> <button data-g="48.9262,2.1135,17">OTAN</button> <button data-g="48.8665,2.1225,17">Louveciennes</button> <button data-g="49.0138,1.9369,17">Évecquemont</button> <button data-g="48.9938,2.1174,17">Conflans</button> <button data-g="49.0543,2.1105,16">Pontoise</button> <button data-g="49.0617,2.1952,16">Méry</button></div></div>
+<style>
+html,body,#m{height:100%;margin:0}
+#p{position:absolute;z-index:1000;top:10px;right:10px;background:#fff;padding:8px 10px;border-radius:8px;font:13px system-ui,sans-serif;box-shadow:0 1px 6px #0006;width:270px;max-height:calc(100% - 40px);overflow:auto}
+#p.ferme #corps{display:none}
+#tete{display:flex;align-items:center;justify-content:space-between;gap:6px}
+#tete b{font-size:14px}
+#p button{font:12px system-ui,sans-serif;cursor:pointer;border:1px solid #bbb;background:#f6f6f6;border-radius:4px;padding:2px 6px}
+#p button:hover{background:#e8e8e8}#p button.on{background:#2a6;color:#fff;border-color:#2a6}
+.sec{border-top:1px solid #ddd;margin-top:7px;padding-top:6px}
+.sec h4{margin:0 0 4px;font-size:11px;text-transform:uppercase;color:#666;letter-spacing:.04em}
+.fonds label{display:inline-block;margin:2px 8px 2px 0}
+.plan{display:grid;grid-template-columns:18px 1fr auto auto;align-items:center;gap:4px;margin:3px 0}
+.plan .nom{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plan input[type=range]{grid-column:2/5;width:100%;height:14px;margin:0}
+.badge{font-size:11px;cursor:help}
+#rech{display:flex;gap:4px}#rech input{flex:1;min-width:0;font:12px system-ui;padding:3px 5px;border:1px solid #bbb;border-radius:4px}
+#res div{padding:3px 4px;cursor:pointer;border-radius:3px;font-size:12px}#res div:hover{background:#eef}
+.outils{display:flex;flex-wrap:wrap;gap:4px}
+#info{font-size:12px;color:#333;margin-top:4px;min-height:16px}
+#rideau{position:absolute;top:0;bottom:0;width:4px;margin-left:-2px;background:#fff;box-shadow:0 0 4px #000a;z-index:900;cursor:ew-resize;display:none}
+#rideau span{position:absolute;top:50%;left:-13px;width:30px;height:30px;margin-top:-15px;border-radius:50%;background:#fff;box-shadow:0 0 4px #000a;text-align:center;line-height:30px;font:bold 14px system-ui;user-select:none}
+.leaflet-container.mesure{cursor:crosshair}
+.cp{font:12px system-ui}.cp button{font:11px system-ui;margin-top:4px}
+</style></head><body>
+<div id="m"></div><div id="rideau"><span>⇔</span></div>
+<div id="p">
+ <div id="tete"><b>Atlas IGC</b><button id="pli" title="Replier / déplier le menu">☰</button></div>
+ <div id="corps">
+  <div class="sec"><h4>Rechercher</h4>
+   <div id="rech"><input id="q" placeholder="Adresse, lieu, commune…"><button id="go">🔍</button></div><div id="res"></div></div>
+  <div class="sec"><h4>Fond de carte</h4><div class="fonds">
+   <label><input type="radio" name="b" value="o" checked> Photo</label>
+   <label><input type="radio" name="b" value="l"> Relief LiDAR</label>
+   <label><input type="radio" name="b" value="p"> Plan</label>
+   <label><input type="radio" name="b" value="w"> Fond blanc</label></div>
+   <label><input id="cad" type="checkbox"> Cadastre (parcelles IGN)</label></div>
+  <div class="sec"><h4>Plans</h4><div id="plans"></div></div>
+  <div class="sec"><h4>Outils</h4><div class="outils">
+   <button id="bPos" title="Centrer la carte sur ma position">📍 Ma position</button>
+   <button id="bMes" title="Clique pour poser des points, double-clic ou Échap pour finir">📏 Mesurer</button>
+   <button id="bRid" title="Comparer le plan et le fond avec une barre à glisser">⇔ Rideau</button>
+   <button id="bLien" title="Copier un lien vers la vue actuelle">🔗 Lien</button></div>
+   <div id="info">Clique sur la carte pour avoir les coordonnées.</div></div>
+ </div>
+</div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const g=(l,s,f)=>`https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${l}&STYLE=${s}&FORMAT=${f}&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`;
-const B={o:L.tileLayer(g('ORTHOIMAGERY.ORTHOPHOTOS','normal','image/jpeg'),{maxZoom:21,maxNativeZoom:18}),
-l:L.tileLayer(g('IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.SHADOW','normal','image/png'),{maxZoom:20,maxNativeZoom:18}),
-p:L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,maxNativeZoom:19}),w:L.tileLayer('data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==',{maxZoom:21})};
-const map=L.map('m',{layers:[B.o]}).setView([48.9955,2.0075],16);
-const at=L.tileLayer('tiles/{z}/{x}/{y}.png',{minZoom:14,maxZoom:20,maxNativeZoom:18,zIndex:10}).addTo(map);
-document.querySelectorAll('[name=b]').forEach(r=>r.onchange=()=>{Object.values(B).forEach(x=>map.removeLayer(x));B[r.value].addTo(map);at.bringToFront();ot.bringToFront();lv.bringToFront();ev.bringToFront();cf.bringToFront();pt.bringToFront();me.bringToFront()});
-const lv=L.tileLayer('louv/{z}/{x}/{y}.png',{minZoom:15,maxZoom:21,maxNativeZoom:19,zIndex:12}).addTo(map);
-const ev=L.tileLayer('evec/{z}/{x}/{y}.png',{minZoom:15,maxZoom:21,maxNativeZoom:19,zIndex:13}).addTo(map);
-const cf=L.tileLayer('conf/{z}/{x}/{y}.png',{minZoom:15,maxZoom:21,maxNativeZoom:19,zIndex:14}).addTo(map);
-const pt=L.tileLayer('pont/{z}/{x}/{y}.png',{minZoom:15,maxZoom:21,maxNativeZoom:19,zIndex:15}).addTo(map);
-const me=L.tileLayer('mery/{z}/{x}/{y}.png',{minZoom:15,maxZoom:21,maxNativeZoom:19,zIndex:16}).addTo(map);
-const ot=L.tileLayer('otan/{z}/{x}/{y}.png',{minZoom:15,maxZoom:21,maxNativeZoom:19,zIndex:11}).addTo(map);
-document.getElementById('a').oninput=e=>{at.setOpacity(+e.target.value);ot.setOpacity(+e.target.value);lv.setOpacity(+e.target.value);ev.setOpacity(+e.target.value);cf.setOpacity(+e.target.value);pt.setOpacity(+e.target.value);me.setOpacity(+e.target.value)};
-document.getElementById('cl').onchange=e=>e.target.checked?lv.addTo(map):map.removeLayer(lv);
-document.getElementById('ce').onchange=e=>e.target.checked?ev.addTo(map):map.removeLayer(ev);
-document.getElementById('cc').onchange=e=>e.target.checked?cf.addTo(map):map.removeLayer(cf);
-document.getElementById('cm').onchange=e=>e.target.checked?me.addTo(map):map.removeLayer(me);
-document.getElementById('cp').onchange=e=>e.target.checked?pt.addTo(map):map.removeLayer(pt);
-const cd=L.tileLayer(g('CADASTRALPARCELS.PARCELLAIRE_EXPRESS','PCI%20vecteur','image/png'),{maxZoom:21,maxNativeZoom:19,zIndex:50});
-document.getElementById('cad').onchange=e=>e.target.checked?cd.addTo(map):map.removeLayer(cd);
-document.getElementById('co').onchange=e=>e.target.checked?ot.addTo(map):map.removeLayer(ot);
-document.querySelectorAll('button[data-g]').forEach(b=>b.onclick=()=>{const [a,c,z]=b.dataset.g.split(',');map.setView([+a,+c],+z)});
+const store={get(k,d){try{const v=localStorage.getItem('atlas_'+k);return v===null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('atlas_'+k,JSON.stringify(v))}catch(e){}}};
+const map=L.map('m',{zoomControl:true});
+map.createPane('plans').style.zIndex=250;map.createPane('cadp').style.zIndex=300;
+const B={o:L.tileLayer(g('ORTHOIMAGERY.ORTHOPHOTOS','normal','image/jpeg'),{maxZoom:21,maxNativeZoom:18,attribution:'IGN'}),
+l:L.tileLayer(g('IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.SHADOW','normal','image/png'),{maxZoom:21,maxNativeZoom:18,attribution:'IGN'}),
+p:L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:21,maxNativeZoom:19,attribution:'© OpenStreetMap'}),
+w:L.tileLayer('data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==',{maxZoom:21})};
+// liste des plans : id, nom, dossier, vue, précision
+const P=[
+ {id:'tr',nom:'Triel',d:'tiles',min:14,nat:18,v:[48.9955,2.0075,16],ok:'⚠️',t:'Calage approximatif : 1 à 10 m selon les planches'},
+ {id:'ot',nom:'OTAN (Mesnil-le-Roi)',d:'otan',min:15,nat:19,v:[48.9262,2.1135,17],ok:'⚠️',t:'Précision non mesurable (pas de repère de surface)'},
+ {id:'lv',nom:'Louveciennes',d:'louv',min:15,nat:19,v:[48.8665,2.1225,17],ok:'•',t:'Précision non vérifiée'},
+ {id:'ev',nom:'Évecquemont C',d:'evec',min:15,nat:19,v:[49.0138,1.9369,17],ok:'•',t:'Précision non vérifiée'},
+ {id:'cf',nom:'Conflans AT',d:'conf',min:15,nat:19,v:[48.9938,2.1174,17],ok:'•',t:'Précision non vérifiée'},
+ {id:'pt',nom:'Pontoise',d:'pont',min:15,nat:19,v:[49.0543,2.1105,16],ok:'✅',t:'Calé sur le cadastre : 0,2 à 1 m (haut de l’Hermitage masqué)'},
+ {id:'me',nom:'Méry-sur-Oise (Hennocques)',d:'mery',min:15,nat:19,v:[49.0617,2.1952,16],ok:'✅⚠️',t:'Partie nord (IGC) calée sur cadastre et altitudes : ~1 à 2 m. Reste du plan : même cadre, non vérifiable'}];
+const etat=store.get('plans',{});
+const box=document.getElementById('plans');
+P.forEach((p,i)=>{const s=etat[p.id]||{on:true,op:1};
+ p.layer=L.tileLayer(p.d+'/{z}/{x}/{y}.png',{minZoom:p.min,maxZoom:21,maxNativeZoom:p.nat,pane:'plans',zIndex:10+i,opacity:s.op});
+ if(s.on)p.layer.addTo(map);
+ const r=document.createElement('div');r.className='plan';
+ r.innerHTML=`<input type="checkbox" ${s.on?'checked':''}><span class="nom" title="${p.nom}">${p.nom}</span><span class="badge" title="${p.t}">${p.ok}</span><button title="Aller sur ce plan">Aller</button><input type="range" min="0" max="1" step="0.05" value="${s.op}" title="Transparence">`;
+ const [cb,,,bt,rg]=r.children;
+ cb.onchange=()=>{cb.checked?p.layer.addTo(map):map.removeLayer(p.layer);sauve()};
+ bt.onclick=()=>{if(!cb.checked){cb.checked=true;p.layer.addTo(map);sauve()}map.setView([p.v[0],p.v[1]],p.v[2])};
+ rg.oninput=()=>{p.layer.setOpacity(+rg.value);sauve()};
+ p.ui={cb,rg};box.appendChild(r)});
+function sauve(){const o={};P.forEach(p=>o[p.id]={on:p.ui.cb.checked,op:+p.ui.rg.value});store.set('plans',o)}
+// fond
+let fond=store.get('fond','o');if(!B[fond])fond='o';B[fond].addTo(map);
+document.querySelectorAll('[name=b]').forEach(r=>{r.checked=r.value===fond;r.onchange=()=>{Object.values(B).forEach(x=>map.removeLayer(x));B[r.value].addTo(map);store.set('fond',r.value)}});
+// cadastre
+const cd=L.tileLayer(g('CADASTRALPARCELS.PARCELLAIRE_EXPRESS','PCI%20vecteur','image/png'),{maxZoom:21,maxNativeZoom:19,pane:'cadp'});
+const cadOn=store.get('cad',false);const cadCb=document.getElementById('cad');cadCb.checked=cadOn;if(cadOn)cd.addTo(map);
+cadCb.onchange=e=>{e.target.checked?cd.addTo(map):map.removeLayer(cd);store.set('cad',e.target.checked)};
+// vue initiale : lien (#z/lat/lon) > dernière vue > Triel
+function lireHash(){const m=location.hash.match(/^#(\d+(?:\.\d+)?)\/(-?\d+\.\d+)\/(-?\d+\.\d+)/);return m?[+m[2],+m[3],+m[1]]:null}
+const h=lireHash()||store.get('vue',null)||[48.9955,2.0075,16];map.setView([h[0],h[1]],h[2]);
+map.on('moveend',()=>{const c=map.getCenter(),z=map.getZoom();const s=`#${z}/${c.lat.toFixed(5)}/${c.lng.toFixed(5)}`;history.replaceState(null,'',s);store.set('vue',[c.lat,c.lng,z])});
+window.addEventListener('hashchange',()=>{const v=lireHash();if(v)map.setView([v[0],v[1]],v[2])});
+// menu repliable
+const pan=document.getElementById('p');if(store.get('ferme',window.innerWidth<600))pan.classList.add('ferme');
+document.getElementById('pli').onclick=()=>{pan.classList.toggle('ferme');store.set('ferme',pan.classList.contains('ferme'))};
+L.DomEvent.disableClickPropagation(pan);L.DomEvent.disableScrollPropagation(pan);
+const info=document.getElementById('info');
+const copier=t=>{try{navigator.clipboard.writeText(t);return true}catch(e){return false}};
+// recherche (géocodage IGN)
+const q=document.getElementById('q'),res=document.getElementById('res');
+async function chercher(){const t=q.value.trim();if(!t)return;res.textContent='Recherche…';
+ try{const r=await fetch('https://data.geopf.fr/geocodage/search?limit=5&q='+encodeURIComponent(t));const j=await r.json();res.innerHTML='';
+  if(!j.features||!j.features.length){res.textContent='Aucun résultat';return}
+  j.features.forEach(f=>{const d=document.createElement('div');d.textContent=f.properties.label;d.onclick=()=>{const [lo,la]=f.geometry.coordinates;map.setView([la,lo],17);res.innerHTML=''};res.appendChild(d)})}
+ catch(e){res.textContent='Recherche indisponible'}}
+document.getElementById('go').onclick=chercher;q.onkeydown=e=>{if(e.key==='Enter')chercher()};
+// coordonnées au clic
+let mesure=null;
+map.on('click',e=>{if(mesure)return;const t=`${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
+ const d=L.DomUtil.create('div','cp');d.innerHTML=`<b>${t}</b><br><button>Copier</button>`;
+ d.querySelector('button').onclick=ev=>{ev.target.textContent=copier(t)?'Copié ✔':'Sélectionne le texte'};
+ L.popup().setLatLng(e.latlng).setContent(d).openOn(map)});
+// ma position
+let posM=null;
+document.getElementById('bPos').onclick=()=>{info.textContent='Recherche de ta position…';map.locate({setView:true,maxZoom:18,enableHighAccuracy:true})};
+map.on('locationfound',e=>{if(posM)map.removeLayer(posM);posM=L.layerGroup([L.circle(e.latlng,{radius:e.accuracy,weight:1,color:'#16f',fillOpacity:.1}),L.circleMarker(e.latlng,{radius:6,color:'#fff',weight:2,fillColor:'#16f',fillOpacity:1})]).addTo(map);info.textContent=`Position à ±${Math.round(e.accuracy)} m`});
+map.on('locationerror',()=>info.textContent='Position indisponible (autorise la localisation)');
+// mesure
+const bMes=document.getElementById('bMes');
+function finMesure(){if(!mesure)return;map.getContainer().classList.remove('mesure');map.doubleClickZoom.enable();bMes.classList.remove('on');mesure.fini=true;mesure=null}
+function dist(pts){let s=0;for(let i=1;i<pts.length;i++)s+=pts[i-1].distanceTo(pts[i]);return s}
+const fmt=m=>m<1000?m.toFixed(1)+' m':(m/1000).toFixed(2)+' km';
+let couches=[];
+bMes.onclick=()=>{if(mesure){finMesure();return}couches.forEach(c=>map.removeLayer(c));couches=[];
+ mesure={pts:[],ligne:L.polyline([],{color:'#e30',weight:3,dashArray:'6 4'}).addTo(map)};couches.push(mesure.ligne);
+ map.getContainer().classList.add('mesure');map.doubleClickZoom.disable();bMes.classList.add('on');info.textContent='Clique pour poser des points, double-clic ou Échap pour finir.'};
+map.on('click',e=>{if(!mesure)return;mesure.pts.push(e.latlng);mesure.ligne.setLatLngs(mesure.pts);couches.push(L.circleMarker(e.latlng,{radius:4,color:'#e30',fillOpacity:1}).addTo(map));info.textContent='Distance : '+fmt(dist(mesure.pts))});
+map.on('dblclick',()=>{if(mesure){info.textContent='Distance totale : '+fmt(dist(mesure.pts))+' (re-clique 📏 pour effacer)';finMesure()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&mesure){info.textContent='Distance totale : '+fmt(dist(mesure.pts));finMesure()}});
+// rideau
+const rid=document.getElementById('rideau'),bRid=document.getElementById('bRid'),pane=map.getPane('plans');let ridX=null;
+function clip(){if(ridX===null){pane.style.clip='';return}const nw=map.containerPointToLayerPoint([0,0]),se=map.containerPointToLayerPoint(map.getSize()),cx=map.containerPointToLayerPoint([ridX,0]).x;pane.style.clip=`rect(${nw.y}px,${cx}px,${se.y}px,${nw.x}px)`;rid.style.left=ridX+'px'}
+bRid.onclick=()=>{if(ridX===null){ridX=map.getSize().x/2;rid.style.display='block';bRid.classList.add('on');info.textContent='Plans à gauche de la barre, fond seul à droite.'}else{ridX=null;rid.style.display='none';bRid.classList.remove('on')}clip()};
+map.on('move zoom resize viewreset zoomend',clip);
+let drag=false;const dep=e=>{if(!drag)return;const x=(e.touches?e.touches[0].clientX:e.clientX)-map.getContainer().getBoundingClientRect().left;ridX=Math.max(0,Math.min(map.getSize().x,x));clip();e.preventDefault()};
+rid.addEventListener('mousedown',e=>{drag=true;e.preventDefault()});rid.addEventListener('touchstart',e=>{drag=true;e.preventDefault()},{passive:false});
+document.addEventListener('mousemove',dep);document.addEventListener('touchmove',dep,{passive:false});
+document.addEventListener('mouseup',()=>drag=false);document.addEventListener('touchend',()=>drag=false);
+// lien
+document.getElementById('bLien').onclick=()=>{info.textContent=copier(location.href)?'Lien copié ✔':location.href};
 </script></body></html>
