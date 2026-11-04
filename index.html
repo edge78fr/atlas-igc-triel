@@ -65,7 +65,8 @@ const P=[
  {id:'ev',nom:'Évecquemont C',d:'evec',min:15,nat:19,v:[49.0138,1.9369,17],ok:'•',t:'Précision non vérifiée'},
  {id:'cf',nom:'Conflans AT',d:'conf',min:15,nat:19,v:[48.9938,2.1174,17],ok:'•',t:'Précision non vérifiée'},
  {id:'pt',nom:'Pontoise',d:'pont',min:15,nat:19,v:[49.0543,2.1105,16],ok:'✅',t:'Calé sur le cadastre : 0,2 à 1 m (haut de l’Hermitage masqué)'},
- {id:'me',nom:'Méry-sur-Oise (Hennocques)',d:'mery',min:15,nat:19,v:[49.0617,2.1952,16],ok:'✅⚠️',t:'Partie nord (IGC) calée sur cadastre et altitudes : ~1 à 2 m. Reste du plan : même cadre, non vérifiable'}];
+ {id:'me',nom:'Méry-sur-Oise (Hennocques)',d:'mery',min:15,nat:19,v:[49.0617,2.1952,16],ok:'✅⚠️',t:'Partie nord (IGC) calée sur cadastre et altitudes : ~1 à 2 m. Reste du plan : même cadre, non vérifiable'},
+ {id:'po',nom:'Poissy (Côte de Poissy)',d:'pois',min:15,nat:19,v:[48.9249,2.0537,17],ok:'✅',t:'Calé sur les parcelles du cadastre (section A) et 18 altitudes : ~1 m'}];
 const etat=store.get('plans',{});
 const box=document.getElementById('plans');
 P.forEach((p,i)=>{const s=etat[p.id]||{on:true,op:1};
